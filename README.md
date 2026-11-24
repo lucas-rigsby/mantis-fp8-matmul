@@ -181,6 +181,9 @@ tb/        mantis_ref.py      bit-exact reference model
            test_bf16_add.py   about 990,000 differential vectors and MAC chains
            test_datapath.py   both datapath organizations at the command level
            test_top.py        pin-level tests, including asynchronous JTAG-pin noise
+           funcov.py          functional-coverage bins and closure report
+           funcov_classes.py  spec-level input classifiers used by the bins
+           coverage_waivers.txt  approved code-coverage waivers
 formal/    tt_um_mantis.sby   k-induction proof of P1, P5 and P6, with cover checks
 syn/       synth.sh           Yosys/ABC area and timing estimates at tt and ss
            mac_comb.v         synthesis-only single-cycle MAC used during gate T6

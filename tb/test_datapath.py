@@ -9,7 +9,8 @@ Both expose the same ports, so the same tests run on each top level:
                   NOP/READ/in_valid=0 idle cycles
   clear_flush     R13, P10: CLEAR at every cycle 0..7 after issue and during
                   partial groups; nothing pre-CLEAR commits afterwards
-  reset_flush     R14: reset at every cycle after issue clears all state
+  reset_flush     R14: reset at every cycle after issue and during partial
+                  groups clears all state
 
 Run (OSS CAD Suite):
     source ~/eda/oss-cad-suite/environment
@@ -24,10 +25,20 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge, ReadOnly, RisingEdge
 
+from funcov import Cover, closure_report
+from funcov_classes import CommandCoverage
 from mantis_ref import matmul, rand_matmul, write_stream
 
 WRITE, CLEAR, READ, NOP = 0, 1, 2, 3
 MAX_DRAIN = 8                                     # R11 target
+COV = CommandCoverage(Cover)                      # functional coverage of the command stream
+
+
+def ref(A, B, fa, fb):
+    """Reference result; also samples its result classes for coverage."""
+    C = matmul(A, B, fa, fb)
+    COV.results(C)
+    return C
 
 
 def acc_words(dut):
@@ -46,6 +57,7 @@ class Driver:
     async def cycle(self, valid=0, cmd=NOP, din=0, rst_n=1):
         """Drive inputs mid-cycle, then sample state just after the rising edge."""
         await FallingEdge(self.dut.clk)
+        COV.step(valid, cmd, din, rst_n)
         self.dut.rst_n.value = rst_n
         self.dut.in_valid.value = valid
         self.dut.cmd.value = cmd
@@ -96,7 +108,7 @@ async def spec_examples(dut):
     C = await run_matmul(d, [[sixteen, one, one], [one] * 3],
                          [[sixteen, one], [one, one], [one, one]], 0, 0)
     assert C[0][0] == 0x4380, f"R3: C00 = {C[0][0]:#06x}"
-    assert C == matmul([[sixteen, one, one], [one] * 3], [[sixteen, one], [one, one], [one, one]], 0, 0)
+    assert C == ref([[sixteen, one, one], [one] * 3], [[sixteen, one], [one, one], [one, one]], 0, 0)
     # R5: E5M2 1 * 57344; R6: A=E4M3FN 1, B=E5M2 1
     C = await run_matmul(d, [[0x3C], [0x3C]], [[0x7B, 0x3C]], 1, 1)
     assert C[0][0] == 0x4760 and C[0][1] == 0x3F80, f"R5: {fmt_hex(C)}"
@@ -144,7 +156,7 @@ async def streaming(dut):
     for fa, fb in ((0, 0), (0, 1), (1, 0), (1, 1)):
         A, B, _, _ = rand_matmul(rng, 250, fa, fb)
         C = await run_matmul(d, A, B, fa, fb)
-        exp = matmul(A, B, fa, fb)
+        exp = ref(A, B, fa, fb)
         assert C == exp, f"R10 fmt=({fa},{fb}): got {fmt_hex(C)} expected {fmt_hex(exp)}"
     dut._log.info("R10: 4 x 250 back-to-back groups match the reference")
 
@@ -169,7 +181,7 @@ async def random_traffic(dut):
                     await d.cycle(1, READ, rng.getrandbits(8))
             await d.write(byte)
         await d.idle_until_done()
-        C, exp = acc_words(dut), matmul(A, B, fa, fb)
+        C, exp = acc_words(dut), ref(A, B, fa, fb)
         assert C == exp, f"trial {trial} K={K} fmt=({fa},{fb}): got {fmt_hex(C)} expected {fmt_hex(exp)}"
     dut._log.info("R1: 150 random matrix products match the reference")
 
@@ -230,6 +242,21 @@ async def reset_flush(dut):
         for _ in range(12):
             await d.cycle()
             assert acc_words(dut) == [[0, 0], [0, 0]], f"R14: pre-reset step committed (delay {delay})"
+    # partial group (1, 2 or 3 bytes) then reset then a full group: only the new one counts
+    for partial in (1, 2, 3):
+        await d.clear(0, 0)
+        for _ in range(partial):
+            await d.write(0x58)                           # 16.0 in E4M3FN
+        await d.cycle(rst_n=0)
+        assert int(dut.n.value) == 0, f"R14: n not reset (partial {partial})"
+        C = await run_matmul_no_clear(d, [[0x38], [0x38]], [[0x38, 0x38]])
+        assert C == [[0x3F80, 0x3F80], [0x3F80, 0x3F80]], f"R14: partial {partial}: {fmt_hex(C)}"
+
+
+@cocotb.test()
+async def functional_coverage(dut):
+    """Closure of the command-level coverage groups; fails on any empty bin."""
+    closure_report(dut._log)
 
 
 def _run(top):

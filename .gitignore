@@ -21,3 +21,7 @@ formal/*/
 *.swp
 .vscode/
 .idea/
+
+# Verilator coverage outputs
+tb/sim_build_cov/
+tb/coverage.dat

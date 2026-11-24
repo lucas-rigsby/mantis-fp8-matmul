@@ -13,6 +13,9 @@ on uo_out via READ, exactly as the host sees them.
   jtag_inert       R25, P8: random asynchronous toggling of tck/tms/tdi (and
                    uio_in[4], uio_in[7]) leaves every output identical,
                    cycle by cycle, to a quiet run; tdo = 0 throughout
+  special_results_at_pins  R8, R9: +inf, -inf and exact zero at the pins
+  flush_at_pins    R13, R14, P10: CLEAR or reset 1..7 edges after an issue,
+                   checked through uo_out
   stream_readout   R1, R10: back-to-back streams in all four format pairs,
                    read back through uo_out
 
@@ -29,11 +32,21 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge, ReadOnly, RisingEdge, Timer
 
+from funcov import Cover, closure_report
+from funcov_classes import CommandCoverage
 from mantis_ref import matmul, rand_matmul, readout_bytes, write_stream
 
 WRITE, CLEAR, READ, NOP = 0, 1, 2, 3
 JTAG_MASK = 0b1111_1000            # uio_in[7:3]: tck, (4), tms, tdi, (7)
 _QUIET_RUN = {}                    # jtag_inert_quiet -> jtag_inert_noisy
+COV = CommandCoverage(Cover, top=True)   # functional coverage of the pin-level command stream
+
+
+def ref(A, B, fa, fb):
+    """Reference result; also samples its result classes for coverage."""
+    C = matmul(A, B, fa, fb)
+    COV.results(C)
+    return C
 
 
 class Top:
@@ -51,6 +64,7 @@ class Top:
 
     async def cycle(self, valid=0, cmd=NOP, din=0, rst_n=1):
         await FallingEdge(self.dut.clk)
+        COV.step(valid, cmd, din, rst_n, jtag=self.high & JTAG_MASK)
         self.dut.rst_n.value = rst_n
         self.dut.ui_in.value = din
         self.low = (cmd << 1) | valid
@@ -181,7 +195,7 @@ async def read_while_busy(dut):
         for _ in range((8 - reads % 8) % 8):                # back to p = 0
             await top.read()
         got = await top.read_all()
-        exp = readout_bytes(matmul(A, B, fa, fb))
+        exp = readout_bytes(ref(A, B, fa, fb))
         assert got == exp, f"trial {trial}: got {got} expected {exp}"
 
 
@@ -237,8 +251,47 @@ async def _traffic(top, seed):
         await top.drain()
         while int(top.dut.p.value):
             await top.read()
-        results.append(await top.read_all())
+        got = await top.read_all()
+        assert got == readout_bytes(ref(A, B, fa, fb)), f"R1: traffic result {got}"
+        results.append(got)
     return results
+
+
+@cocotb.test()
+async def special_results_at_pins(dut):
+    """R8, R9: +inf, -inf and an exact zero read back through uo_out (E5M2)."""
+    top = await start(dut)
+    one, m_one, inf, m_inf = 0x3C, 0xBC, 0x7C, 0xFC
+    cases = (
+        ([[inf, one], [m_inf, one]], [[one, one], [one, m_one]]),   # C0x = +inf, C1x = -inf
+        ([[one, one], [one, one]], [[one, one], [m_one, one]]),     # C00 = C10 = 1 - 1 = +0
+    )
+    for A, B in cases:
+        got = await matmul_on_pins(top, A, B, 1, 1)
+        exp = readout_bytes(ref(A, B, 1, 1))
+        assert got == exp, f"R8/R9: got {got} expected {exp}"
+
+
+@cocotb.test()
+async def flush_at_pins(dut):
+    """R13, R14, P10: CLEAR or reset at each edge 1..7 after an issue reads back
+    all zeros, and nothing issued before it commits later."""
+    top = await start(dut)
+    for action in ("clear", "reset"):
+        for k in range(1, 8):
+            await top.clear(0, 0)
+            for b in write_stream([[0x38, 0x38], [0x38, 0x38]], [[0x38, 0x38], [0x38, 0x38]]):
+                await top.write(b)                        # last WRITE is the issuing edge
+            for _ in range(k - 1):
+                await top.cycle()
+            if action == "clear":
+                await top.clear(0, 0)
+            else:
+                await top.cycle(rst_n=0)
+            assert await top.read_all() == [0] * 8, f"{action} {k} edges after issue: not zero"
+            for _ in range(12):
+                await top.cycle()
+            assert await top.read_all() == [0] * 8, f"P10: {action} {k}: an old step committed"
 
 
 @cocotb.test()
@@ -269,7 +322,13 @@ async def stream_readout(dut):
     for fa, fb in ((0, 0), (0, 1), (1, 0), (1, 1)):
         A, B, _, _ = rand_matmul(rng, 200, fa, fb)
         got = await matmul_on_pins(top, A, B, fa, fb)
-        assert got == readout_bytes(matmul(A, B, fa, fb)), f"R10 fmt=({fa},{fb})"
+        assert got == readout_bytes(ref(A, B, fa, fb)), f"R10 fmt=({fa},{fb})"
+
+
+@cocotb.test()
+async def functional_coverage(dut):
+    """Closure of the pin-level coverage groups; fails on any empty bin."""
+    closure_report(dut._log)
 
 
 def test_top():

@@ -1,0 +1,15 @@
+# Code-coverage waivers for MANTIS (docs/signoff.md, waiver W1).
+# Approved by lucas-rigsby on 2026-11-23. Format: <file-glob>:<line|*> <regex on the point>  # reason
+rtl/bf16_add_s1.v:19 ^spec_val\[[0-5]\]:       # special results are only +-0, +-inf (7F80/FF80) and NaN 7FC0: bits [5:0] are always 0
+rtl/bf16_add_s2.v:15 ^spec_val\[[0-5]\]:       # same constant set as bf16_add_s1.spec_val, passed through
+rtl/mantis_dp_shared.v:* ^q_spec_val\[[0-5]\]: # pipeline register of spec_val: bits [5:0] are always 0
+rtl/mantis_dp_shared.v:* ^spec_val\[[0-5]\]:  # wire from bf16_add_s1.spec_val: bits [5:0] are always 0
+rtl/bf16_add_s1.v:36 ^m_big\[7\]:              # hidden bit, tied to 1
+rtl/bf16_add_s1.v:45 ^big_al\[(0|1|2|10)\]:    # {m_big, 3'b000}: [2:0] are zero padding, [10] is the hidden bit
+rtl/fp8_unpack.v:30 ^bias\[[012456]\]:         # bias is 7 (0000111) or 15 (0001111): only bit 3 differs
+rtl/fp8_unpack.v:32 ^e_sub\[[012456]\]:        # 1 - bias is -6 (1111010) or -14 (1110010): only bit 3 differs
+rtl/tt_um_mantis.v:22 ^uio_out\[[0-35-7]\]:    # R15/P1/R25: constant 0 by specification (only uio_out[4] = busy toggles)
+rtl/tt_um_mantis.v:23 ^uio_oe\[[0-7]\]:        # R15/P1: constant 8'h90 by specification
+rtl/tt_um_mantis.v:24 ^ena:                     # Tiny Tapeout holds ena = 1 while the design is selected; unused by the design
+rtl/tt_um_mantis.v:62 ena, uio_in\[7:3\]                 # lint sink that collects unused inputs; not logic
+rtl/bf16_add.v:* .                              # combinational wrapper kept for the T6 prototype; not in the submitted design

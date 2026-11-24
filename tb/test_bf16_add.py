@@ -26,11 +26,58 @@ from pathlib import Path
 import cocotb
 from cocotb.triggers import Timer
 
+from funcov import Cover, closure_report
+from funcov_classes import add_features
 from mantis_ref import (DIRECTED_ADD, add_bf16, boundary_add, mac,
                         mul, rand_bf16, rand_operands, rand_product)
 
+# ---- functional coverage (classified from the addends and docs/spec.md R3, R7 to R9)
+COV_ROUND = Cover("R3: round-to-nearest-even position", {
+    "exact":                lambda f: f["round"] == "exact" and f["special"] is None and not f["zeros"] and not f["cancel"],
+    "below half":           lambda f: f["round"] == "below",
+    "tie, kept even":       lambda f: f["round"] == "tie_even",
+    "tie, rounded to even": lambda f: f["round"] == "tie_odd",
+    "above half":           lambda f: f["round"] == "above",
+    "carry into exponent":  lambda f: f["carry"],
+}, at_least=10)
+COV_ALIGN = Cover("R3: operand alignment and effective operation", {
+    "add, d = 0":           lambda f: f["align"] == 0 and not f["eff_sub"],
+    "add, d = 1..7":        lambda f: f["align"] is not None and 1 <= f["align"] <= 7 and not f["eff_sub"],
+    "add, d = 8..10":       lambda f: f["align"] is not None and 8 <= f["align"] <= 10 and not f["eff_sub"],
+    "add, d = 11":          lambda f: f["align"] == 11 and not f["eff_sub"],
+    "add, d >= 12":         lambda f: f["align"] is not None and f["align"] >= 12 and not f["eff_sub"],
+    "sub, d = 0":           lambda f: f["align"] == 0 and f["eff_sub"],
+    "sub, d = 1":           lambda f: f["align"] == 1 and f["eff_sub"],
+    "sub, d = 2..10":       lambda f: f["align"] is not None and 2 <= f["align"] <= 10 and f["eff_sub"],
+    "sub, d >= 11":         lambda f: f["align"] is not None and f["align"] >= 11 and f["eff_sub"],
+    "sub, exponent drops >= 4": lambda f: f["drop"] and f["eff_sub"],
+}, at_least=10)
+COV_RANGE = Cover("R8, R9: range limits and zeros", {
+    "R8 overflow to inf":   lambda f: f["overflow"],
+    "R9 flush to zero":     lambda f: f["ftz"],
+    "R9 x + (-x) = +0":     lambda f: f["cancel"],
+    "R9 +0 + +0":           lambda f: f["zeros"] == "++",
+    "R9 +0 + -0":           lambda f: f["zeros"] == "+-",
+    "R9 -0 + +0":           lambda f: f["zeros"] == "-+",
+    "R9 -0 + -0":           lambda f: f["zeros"] == "--",
+})
+COV_SPECIAL = Cover("R7, R8: special operands", {
+    "R7 NaN in":            lambda f: f["special"] == "nan_in",
+    "R7 +inf + -inf":       lambda f: f["special"] == "inf_opp",
+    "R8 inf + inf, same sign": lambda f: f["special"] == "inf_same",
+    "R8 inf acc + finite":  lambda f: f["special"] == "inf_acc",
+    "R8 finite + inf prod": lambda f: f["special"] == "inf_prod",
+})
+
+
+def _sample(acc, prod):
+    f = add_features(acc, prod)
+    for c in (COV_ROUND, COV_ALIGN, COV_RANGE, COV_SPECIAL):
+        c.sample(f)
+
 
 async def _apply(dut, acc, prod):
+    _sample(acc, prod)
     dut.a.value = acc
     dut.b.value = prod
     await Timer(1, unit="ns")
@@ -99,6 +146,12 @@ async def mac_chains(dut):
             steps += 1
             assert acc_rtl == acc_ref, f"chain {chain}: got {acc_rtl:#06x} expected {acc_ref:#06x}"
     dut._log.info(f"mac_chains: 2000 chains, {steps} steps match the reference")
+
+
+@cocotb.test()
+async def functional_coverage(dut):
+    """Closure of the functional-coverage groups above; fails on any bin under its minimum."""
+    closure_report(dut._log)
 
 
 def test_bf16_add():
