@@ -2,31 +2,31 @@
 
 | Item | Value |
 |---|---|
-| Design | `tt_um_mantis` (MANTIS FP8 matrix multiplier) |
-| Front-end commit | RTL at `75c23a1` (this repository); tests, coverage and this record in the commit that adds this file |
-| Back-end commit | `35026d4` ([tt-mantis-fp8-matmul](https://github.com/lucas-rigsby/tt-mantis-fp8-matmul)); `src/` is byte-identical to `rtl/` at `75c23a1` |
-| Hardening run | [actions run 45324496603](https://github.com/lucas-rigsby/tt-mantis-fp8-matmul/actions/runs/45324496603) |
+| Design | `tt_um_lucas_rigsby_mantis` (MANTIS FP8 matrix multiplier) |
+| Front-end commit | the commit of this repository that contains this revision of the record; `rtl/` there is byte-identical to `src/` at the back-end commit |
+| Back-end commit | `4414bb7` ([tt-mantis-fp8-matmul](https://github.com/lucas-rigsby/tt-mantis-fp8-matmul)) |
+| Hardening run | [actions run 45333547592](https://github.com/lucas-rigsby/tt-mantis-fp8-matmul/actions/runs/45333547592) |
 | Date | 2026-11-23 |
 | Shuttle | Tiny Tapeout Sky130, `tt-gds-action@ttsky26d`, PDK `sky130A`, `sky130_fd_sc_hd`, $1 \times 2$ tiles |
 | Front-end tools | Yosys 0.71+50, Verilator 5.055 (devel), Icarus Verilog 14.0 (devel), SymbiYosys v0.71-7, cocotb 2.1.0.dev0 |
 | Back-end tools | LibreLane 3.0.14 (Tiny Tapeout app `main 7d2d2ef5`) |
 
-**Decision: not ready for tapeout.** Every check passes or is waived with
-approval except row 17: the bring-up vectors and plan do not exist yet. See
-[Open items](#open-items).
+**Decision: ready for tapeout.** Every check passes or is waived with the
+project owner's approval (W1 to W3). Submission through the Tiny Tapeout app is
+done by the project owner.
 
 ## Front-end checks
 
 | # | Check | Command | Result | Status |
 |---|---|---|---|---|
 | 1 | Requirements traced | `spec_trace.py --strict` | 44 IDs, 29 tested or proven, 15 gaps: R16 to R24, P7, P9 and T4 (JTAG stretch, not built) and T1 to T3 (back-end; the tool does not read the hardening results, which are rows 10, 12 and 13 below) | WAIVED (W2, W3) |
-| 2 | Lint | `make lint` | Verilator `-Wall`: no warnings for `tt_um_mantis` or `mantis_dp_pe4` | PASS |
-| 3 | Regression | `make test` | 4 suites, 5 pytest items, all pass: `test_fp8_mul` 10.9 s, `test_bf16_add` 60.4 s, `test_datapath` (both datapaths) 4.4 s, `test_top` 2.0 s. 3 + 6 + 7 (per datapath) + 11 cocotb tests including the closure tests, 0 failures | PASS |
-| 4 | Formal | `make formal` | `tt_um_mantis_prove`: basecase and induction pass (smtbmc boolector). `tt_um_mantis_cover`: 3 cover statements reached, 0 unreached | PASS |
+| 2 | Lint | `make lint` | Verilator `-Wall`: no warnings for `tt_um_lucas_rigsby_mantis` or `mantis_dp_pe4` | PASS |
+| 3 | Regression | `make test`, `make bringup-sim` | 4 suites, 5 pytest items, 80 s in total: `test_fp8_mul` 3, `test_bf16_add` 6, `test_datapath` 7 per datapath and `test_top` 11 cocotb tests, including the closure tests. `bringup-sim`: 3 tests. 0 failures | PASS |
+| 4 | Formal | `make formal` | `tt_um_lucas_rigsby_mantis_prove`: basecase and induction pass (smtbmc boolector). `tt_um_lucas_rigsby_mantis_cover`: 3 cover statements reached, 0 unreached | PASS |
 | 5 | Code coverage | Verilator `--coverage` on all four suites, merged with `cov_report.py --min 100` (no `make cov` target exists; run from a scratch runner) | Before waivers: line 100 %, branch 100 %, expression 1 hole, toggle 63 holes on the submitted files. With the 13 waivers in `tb/coverage_waivers.txt`: 100.0 % of 2,313 points, 115 waived | WAIVED (W1) |
 | 6 | Functional coverage | `functional_coverage` test, last in each suite (`tb/funcov.py`, bins in `tb/funcov_classes.py` and the test modules) | 16 groups, 119 bins, every bin hit; a deliberately empty bin was confirmed to fail the suite. See [Functional coverage](#functional-coverage) | PASS |
 | 7 | Mutation | `mutate.py` on the 7 submitted files, checks `test` and `formal`, 40 sampled mutants of 246 | 35 of 38 killed (92 %), 2 stillborn. `test` killed 35, `formal` 3 (all also killed by `test`). The 3 survivors are equivalent mutants, see [Mutation survivors](#mutation-survivors) | PASS |
-| 8 | CDC and latches | `domains.py --top tt_um_mantis --strict` | 1 domain (`posedge clk`), 0 crossings, 0 latches | PASS |
+| 8 | CDC and latches | `domains.py --top tt_um_lucas_rigsby_mantis --strict` | 1 domain (`posedge clk`), 0 crossings, 0 latches | PASS |
 | 9 | FPGA timing | `make fpga` | Not prototyped on an FPGA | N/A |
 
 ## Back-end checks
@@ -35,16 +35,16 @@ approval except row 17: the bring-up vectors and plan do not exist yet. See
 |---|---|---|---|---|
 | 10 | Physical signoff | `ll_summary.py runs/wokwi --check` on the `GDS_logs` artifact | Worst setup slack: ss +3.347 ns (`max_ss_100C_1v60`), tt +11.69 ns, ff +13.48 ns; 0 violations. Worst hold slack +0.116 ns (`min_ff_n40C_1v95`); 0 violations. Routing DRC 0, Magic DRC 0, LVS 0, antenna 0, latches 0, illegal overlaps 0. KLayout DRC is skipped in the flow and run by precheck (row 13) | PASS |
 | 11 | Warnings reviewed | `tt_tool.py --print-warnings` not available locally; `runs/wokwi/warning.log` reviewed instead | See [Warnings](#warnings); each is explained | PASS |
-| 12 | Gate-level sim | CI job `gl_test`, `make GATES=yes` | 8 tests, 8 pass, 0 fail | PASS |
-| 13 | Shuttle precheck | CI job `precheck` | Pass, including Magic DRC, KLayout FEOL, BEOL, offgrid and the pin, boundary and power-pin checks | PASS |
+| 12 | Gate-level sim | CI job `gl_test`, `make GATES=yes` | 13 tests, 13 pass: the 10 pin-level tests and the 3 bring-up tests (`bringup_smoke`, `bringup_vectors` with 58 vectors, `bringup_at_speed`) | PASS |
+| 13 | Shuttle precheck | CI job `precheck` | 17 of 17 checks pass, including Magic DRC, KLayout FEOL, BEOL, offgrid and the pin, boundary and power-pin checks | PASS |
 | 14 | Achievable clock | period minus worst setup slack | ss: $20 - 3.347 = 16.65$ ns, about 60 MHz, above `clock_hz` = 50 MHz with 3.3 ns of margin | PASS |
 | 15 | Power | `ll_summary.py` power section | 1.07 mW total (0.77 mW internal, 0.30 mW switching, 36 nW leakage), worst IR drop 60 µV. Default switching activity, no VCD. The specification sets no power budget | PASS |
-| 16 | Docs | `info.yaml`, `docs/info.md` | Pinout matches `tt_um_mantis.v` and the specification interface table. The worked example in `docs/info.md` is the `readout_example` test, which passes at RTL and gate level | PASS |
-| 17 | Bring-up ready | `make vectors bringup-sim` | No target, no vectors, no `bringup/plan.md` | FAIL |
+| 16 | Docs | `info.yaml`, `docs/info.md` | Pinout matches `tt_um_lucas_rigsby_mantis.v` and the specification interface table. The worked example in `docs/info.md` is the `readout_example` test, which passes at RTL and gate level | PASS |
+| 17 | Bring-up ready | `make vectors bringup-sim` | 58 vectors exported from the reference model; smoke, vector and at-speed tests pass at RTL (`bringup-sim`) and at gate level (row 12); `bringup/plan.md` gives the bench steps and pass criteria. The board driver has not run on hardware yet | PASS |
 
-The CI `viewer` job of the same run failed while deploying to GitHub Pages
-("Fetching artifact metadata failed"). It publishes the layout viewer and
-does not affect any check above.
+The CI `viewer` job of this run first failed while deploying to GitHub Pages
+("Fetching artifact metadata failed") and passed when re-run. It publishes the
+layout viewer and does not affect any check above.
 
 ### Size
 
@@ -65,6 +65,10 @@ adder stage 1. Commit `75c23a1` moves the multiplexer into stage M and
 registers the selected accumulator as `pacc`. The change is exact and leaves
 latency unchanged; `docs/feasibility.md` gives the argument and the before and
 after figures.
+
+Commit `4414bb7` renamed the top module from `tt_um_mantis` to
+`tt_um_lucas_rigsby_mantis` and added the bring-up tests. Its hardening run
+reports the same slack, area, power and cell counts as the run for `35026d4`.
 
 ### Functional coverage
 
@@ -131,9 +135,9 @@ differential adder).
 
 ## Open items
 
-| Row | Item | Flow step | Skill |
-|---|---|---|---|
-| 17 | No bring-up vectors or plan | Bring-up preparation | `/bringup` |
+None blocks tapeout. After fabrication, the bench steps in
+`bringup/plan.md` remain, starting with a check that `BoardPins` matches the
+SDK names in the demo-board firmware.
 
 ## Waivers
 
@@ -157,5 +161,5 @@ W1 waiver groups (`tb/coverage_waivers.txt`):
 | `uio_out` bits other than 4 | Constant 0 by specification (R15, R25, P1) |
 | `uio_oe[7:0]` | Constant `8'h90` by specification (R15, P1) |
 | `ena` | Held at 1 by Tiny Tapeout while the design is selected; unused |
-| `_unused` reduction in `tt_um_mantis` | Lint sink for unused inputs, not logic |
+| `_unused` reduction in `tt_um_lucas_rigsby_mantis` | Lint sink for unused inputs, not logic |
 | All points in `bf16_add.v` | Combinational wrapper kept for the T6 prototype; not part of the submitted design |

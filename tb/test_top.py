@@ -1,4 +1,4 @@
-"""cocotb tests for rtl/tt_um_mantis.v (Milestone 4: controller and top level).
+"""cocotb tests for rtl/tt_um_lucas_rigsby_mantis.v (Milestone 4: controller and top level).
 
 Pin-level tests: commands go in on ui_in/uio_in, results come back as bytes
 on uo_out via READ, exactly as the host sees them.
@@ -340,11 +340,11 @@ def test_top():
     runner.build(
         sources=[rtl / f for f in ("fp8_unpack.v", "fp8_mul.v", "bf16_add_s1.v",
                                    "bf16_add_s2.v", "mantis_stage.v",
-                                   "mantis_dp_shared.v", "tt_um_mantis.v")],
-        hdl_toplevel="tt_um_mantis",
-        build_dir=root / "tb" / "sim_build" / f"tt_um_mantis_{sim}",
+                                   "mantis_dp_shared.v", "tt_um_lucas_rigsby_mantis.v")],
+        hdl_toplevel="tt_um_lucas_rigsby_mantis",
+        build_dir=root / "tb" / "sim_build" / f"tt_um_lucas_rigsby_mantis_{sim}",
         always=True,
         timescale=("1ns", "1ps"),
     )
-    runner.test(hdl_toplevel="tt_um_mantis", test_module="test_top",
+    runner.test(hdl_toplevel="tt_um_lucas_rigsby_mantis", test_module="test_top",
                 test_dir=Path(__file__).resolve().parent)

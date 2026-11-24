@@ -4,7 +4,7 @@ Reference area: Tiny Tapeout sky130 2 × 2 slot, $334 \times 225 \approx 75{,}15
 (1 × 1 tile 161 × 111.52 µm; Tiny Tapeout analog specs page, approximate). T7
 pass threshold: datapath cell area $\le 65\,\%$ of this.
 
-Method: `syn/synth.sh` — Yosys 0.71 `synth -flatten` → `abc -liberty -D 20000`
+Method: `syn/synth.sh`, which runs Yosys 0.71 `synth -flatten` → `abc -liberty -D 20000`
 to `sky130_fd_sc_hd__tt_025C_1v80`, with OpenLane don't-use cells excluded
 (`lpflow*`, `probe*`, `diode*`, `*_0`). Timing is ABC `stime` on the mapped
 netlist: liberty cell delays, no wires, no placement, **tt corner only**. It
@@ -25,7 +25,7 @@ register/output path; clock-to-Q (~0.3–0.4 ns) and setup (~0.1–0.2 ns) are
 **not** included. Wire aliases are written as `buf_1` for ABC, which adds a
 little pessimism to the delays.
 
-## T5 — FP8 multiplier (`rtl/fp8_mul.v`, `rtl/fp8_unpack.v`) — 2026-11-23: PASS
+## T5: FP8 multiplier (`rtl/fp8_mul.v`, `rtl/fp8_unpack.v`), 2026-11-23: PASS
 
 | Check | Result |
 |-------|--------|
@@ -48,7 +48,7 @@ Implications for T6/T7:
   area is tight, an unpacked product interface (sign, exponent, 8-bit
   significand, class flags) would remove that redundant decode.
 
-## T6 — BF16 accumulator (`rtl/bf16_add.v`) — 2026-11-23: PASS
+## T6: BF16 accumulator (`rtl/bf16_add.v`), 2026-11-23: PASS
 
 Full-range BF16 adder (`acc + prod → acc`, RNE, specials, overflow, FTZ). No
 reachable-range shortcuts are taken yet.
@@ -101,7 +101,7 @@ leave about 38 percentage points of headroom for the controller, readout and
 the JTAG stretch. If timing allows, the shared MAC frees about 16 % of the slot.
 These are projections; T7 measures them.
 
-## T7 — 2 × 2 datapath (`rtl/mantis_stage.v` + organization) — 2026-11-23: PASS (both)
+## T7: 2 × 2 datapath (`rtl/mantis_stage.v` + organization), 2026-11-23: PASS (both)
 
 Scope: staging, CLEAR/format registers, issue, a pipelined MAC, four
 accumulators and `busy`. READ/`p`/`uo_out` and JTAG are excluded. The test
@@ -161,13 +161,13 @@ cost, because each accumulator is written once per 4 clocks:
   a 1 × 2 slot ($161 \times 225 \approx 36{,}200$ µm²), so a 2-tile submission becomes
   plausible. Four PEs would be ~54 % of 1 × 2 before the controller and JTAG.
 
-**Decision (2026-11-23): (b) shared MAC — `rtl/mantis_dp_shared.v`.** Chosen
+**Decision (2026-11-23): (b) shared MAC, `rtl/mantis_dp_shared.v`.** Chosen
 for half the area and the option of a 1 × 2 submission. `rtl/mantis_dp_pe4.v`
 stays as a reference prototype only (not updated for the ss corner). The
 slow-corner check below changed the adder to two pipeline stages. Still open
 before RTL freeze: whether T2 moves from 2 × 2 to 1 × 2 (a spec change).
 
-## Slow-corner check (ss_100C_1v60) — 2026-11-23: PASS after adder split
+## Slow-corner check (ss_100C_1v60), 2026-11-23: PASS after adder split
 
 Library: `sky130_fd_sc_hd__ss_100C_1v60.lib` from open_pdks build
 `sky130-f6eeac7d…` (ciel-releases), installed in `~/eda/pdk/sky130_fd_sc_hd/`
@@ -220,9 +220,9 @@ Caveats:
   stands in for the flow's resizer.
 - T1 (hardening-flow STA at every corner) remains the authority.
 
-## Milestone 4 — controller and top level (`rtl/tt_um_mantis.v`) — 2026-11-23: PASS
+## Milestone 4: controller and top level (`rtl/tt_um_lucas_rigsby_mantis.v`), 2026-11-23: PASS
 
-`tt_um_mantis` wraps `mantis_dp_shared` and adds:
+`tt_um_lucas_rigsby_mantis` wraps `mantis_dp_shared` and adds:
 - the read pointer `p` (READ: $p \leftarrow (p + 1) \bmod 8$, cleared by CLEAR and reset),
 - `uo_out` as a combinational byte mux of registered `p` (resolves the open item on registered versus combinational `uo_out`),
 - `uio_out = {0, 00, busy, 0000}` and `uio_oe = 8'h90`,
@@ -240,7 +240,7 @@ Verification:
 | NaN reads `C0 7F` and persists (P3); drain at the pins = 6 cycles | pass |
 | R25: asynchronous random tck/tms/tdi (and uio_in[4], [7]) noise; 2,542 cycles identical to a quiet run, tdo = 0 | pass |
 | $4 \times 200$ back-to-back groups read from the pins (R10) | pass |
-| Formal `formal/tt_um_mantis.sby`: P1, P5, P6 by k-induction; 3 non-vacuity covers reached | pass |
+| Formal `formal/tt_um_lucas_rigsby_mantis.sby`: P1, P5, P6 by k-induction; 3 non-vacuity covers reached | pass |
 | Mutants: p wraps at 6 (formal fails); in_valid gated by tck&tms&tdi (only jtag_inert_noisy fails); byte order swapped (5 tests fail) | all caught |
 
 Synthesis (complete design, no JTAG):
@@ -255,7 +255,7 @@ The controller adds about 550 µm² and does not touch the critical path.
 Pin-to-register and register-to-pin paths (the Tiny Tapeout mux and pad
 delays) are not modelled here; they are part of T1.
 
-## Tile target changed to 1 × 2 — 2026-11-23
+## Tile target changed to 1 × 2 (2026-11-23)
 
 Spec T2 is now 2 tiles (1 × 2, $161 \times 225 \approx 36{,}200$ µm²), approved by the
 project owner. Basis: the complete baseline design is 11,047 µm² sized,

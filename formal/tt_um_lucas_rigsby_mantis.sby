@@ -1,7 +1,7 @@
-# Formal proof of the controller/pin properties embedded in rtl/tt_um_mantis.v
+# Formal proof of the controller/pin properties embedded in rtl/tt_um_lucas_rigsby_mantis.v
 # under `ifdef FORMAL: P1 (static pins, R15, R25), P5 and P6 (p and n change
 # only on accepted commands or reset; R12, R13, R14).
-#   cd formal && sby -f tt_um_mantis.sby
+#   cd formal && sby -f tt_um_lucas_rigsby_mantis.sby
 [tasks]
 prove
 cover
@@ -16,8 +16,8 @@ cover: depth 12
 smtbmc boolector
 
 [script]
-read -formal fp8_unpack.v fp8_mul.v bf16_add_s1.v bf16_add_s2.v mantis_stage.v mantis_dp_shared.v tt_um_mantis.v
-prep -top tt_um_mantis
+read -formal fp8_unpack.v fp8_mul.v bf16_add_s1.v bf16_add_s2.v mantis_stage.v mantis_dp_shared.v tt_um_lucas_rigsby_mantis.v
+prep -top tt_um_lucas_rigsby_mantis
 
 [files]
 ../rtl/fp8_unpack.v
@@ -26,4 +26,4 @@ prep -top tt_um_mantis
 ../rtl/bf16_add_s2.v
 ../rtl/mantis_stage.v
 ../rtl/mantis_dp_shared.v
-../rtl/tt_um_mantis.v
+../rtl/tt_um_lucas_rigsby_mantis.v

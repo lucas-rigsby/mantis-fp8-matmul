@@ -8,8 +8,8 @@ rtl/bf16_add_s1.v:36 ^m_big\[7\]:              # hidden bit, tied to 1
 rtl/bf16_add_s1.v:45 ^big_al\[(0|1|2|10)\]:    # {m_big, 3'b000}: [2:0] are zero padding, [10] is the hidden bit
 rtl/fp8_unpack.v:30 ^bias\[[012456]\]:         # bias is 7 (0000111) or 15 (0001111): only bit 3 differs
 rtl/fp8_unpack.v:32 ^e_sub\[[012456]\]:        # 1 - bias is -6 (1111010) or -14 (1110010): only bit 3 differs
-rtl/tt_um_mantis.v:22 ^uio_out\[[0-35-7]\]:    # R15/P1/R25: constant 0 by specification (only uio_out[4] = busy toggles)
-rtl/tt_um_mantis.v:23 ^uio_oe\[[0-7]\]:        # R15/P1: constant 8'h90 by specification
-rtl/tt_um_mantis.v:24 ^ena:                     # Tiny Tapeout holds ena = 1 while the design is selected; unused by the design
-rtl/tt_um_mantis.v:62 ena, uio_in\[7:3\]                 # lint sink that collects unused inputs; not logic
+rtl/tt_um_lucas_rigsby_mantis.v:22 ^uio_out\[[0-35-7]\]:    # R15/P1/R25: constant 0 by specification (only uio_out[4] = busy toggles)
+rtl/tt_um_lucas_rigsby_mantis.v:23 ^uio_oe\[[0-7]\]:        # R15/P1: constant 8'h90 by specification
+rtl/tt_um_lucas_rigsby_mantis.v:24 ^ena:                     # Tiny Tapeout holds ena = 1 while the design is selected; unused by the design
+rtl/tt_um_lucas_rigsby_mantis.v:62 ena, uio_in\[7:3\]                 # lint sink that collects unused inputs; not logic
 rtl/bf16_add.v:* .                              # combinational wrapper kept for the T6 prototype; not in the submitted design

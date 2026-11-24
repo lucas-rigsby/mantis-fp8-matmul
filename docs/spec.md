@@ -1,7 +1,7 @@
-# MANTIS (`tt_um_mantis`) — specification
+# MANTIS (`tt_um_lucas_rigsby_mantis`): specification
 
-**Revision:** 0.5 (2026-11-23; T2 tile target changed from 2 × 2 to 1 × 2)
-**Top module:** `tt_um_mantis` · **Target:** Tiny Tapeout, Sky130 `sky130_fd_sc_hd`, 50 MHz, 2 tiles (1 × 2) (changed from 2 × 2 on 2026-11-23 after T7 and Milestone 4 synthesis)
+**Revision:** 0.6 (2026-11-23; top module renamed from `tt_um_mantis` to `tt_um_lucas_rigsby_mantis` for a unique name on the shuttle. 0.5: T2 tile target changed from 2 × 2 to 1 × 2)
+**Top module:** `tt_um_lucas_rigsby_mantis` · **Target:** Tiny Tapeout, Sky130 `sky130_fd_sc_hd`, 50 MHz, 2 tiles (1 × 2) (changed from 2 × 2 on 2026-11-23 after T7 and Milestone 4 synthesis)
 
 MANTIS is a 2 × 2 output-stationary FP8 matrix-multiply accelerator. It computes
 $C = AB$ for $A$ ($2 \times K$), $B$ ($K \times 2$), $C$ ($2 \times 2$), $K \ge 1$. Inputs are OCP FP8 (E4M3FN or

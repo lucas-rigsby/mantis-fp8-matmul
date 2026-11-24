@@ -1,6 +1,6 @@
 // mantis_dp_pe4: T7 organization (a), four parallel MAC processing elements.
 //
-// REFERENCE PROTOTYPE ONLY: not used by tt_um_mantis (organization (b),
+// REFERENCE PROTOTYPE ONLY: not used by tt_um_lucas_rigsby_mantis (organization (b),
 // mantis_dp_shared, was chosen). Its single-stage adder misses 20 ns at
 // ss_100C_1v60 (22.6 ns); see docs/feasibility.md. Kept for comparison and
 // still exercised by tb/test_datapath.py.
