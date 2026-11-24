@@ -264,3 +264,45 @@ roughly 7,500–11,300 µm²), it would land around 50–60 %. Policy: drop the
 stretch rather than grow the tile count. The T7 gate above was judged
 against 2 × 2 and is left as recorded; the chosen design would also have
 passed against 65 % of 1 × 2.
+
+## Post-route timing and the accumulator select (2026-11-23)
+
+The first Tiny Tapeout hardening run
+([run 45316669657](https://github.com/lucas-rigsby/tt-mantis-fp8-matmul/actions/runs/45316669657),
+commit `32dd1bb`) failed setup at all three slow corners:
+
+| Corner | Setup slack | Violating endpoints |
+|---|---|---|
+| `max_ss_100C_1v60` | $-0.944$ ns | 3 |
+| `nom_ss_100C_1v60` | $-0.732$ ns | 2 |
+| `min_ss_100C_1v60` | $-0.555$ ns | 2 |
+
+All violations end in `q_sum[11:9]` and start at a synthesis copy of `ptag`.
+The path is the one estimated above as 13.6 ns at ss (acc → 4:1 mux →
+`bf16_add_s1` → bundle register). After routing it is about 21 ns. The select
+net drives 16 `mux4` cells through one buffer, with a slew of 1.22 ns and a
+`mux4` select-to-output delay of 1.67 ns at ss. The synthesis estimate does
+not model either effect.
+
+**Decision:** select the accumulator in stage M and register it as `pacc`
+next to `prod`; stage A1 adds `pacc` and `prod`. An accumulator read for
+product $j$ in cycle $t_0 + j$ commits at edge $t_0 + j + 3$, and the next read
+of it is no earlier than cycle $t_0 + 4 + j$, so the change is exact.
+Latency, drain (6 cycles) and all requirements are unchanged; no test or
+property was modified.
+
+| | Before (`32dd1bb`) | After (`35026d4`) |
+|---|---|---|
+| Synthesis, sized | 11,047 µm², 191 FFs | 11,451 µm², 206 FFs |
+| Synthesis critical path, ss | 13.6 ns | 11.7 ns |
+| Post-route setup slack, worst ss | $-0.944$ ns | **$+3.347$ ns** |
+| Post-route setup slack, worst tt | $+9.617$ ns | $+11.69$ ns |
+| Post-route hold slack, worst (ff) | $+0.129$ ns | $+0.116$ ns |
+| Standard-cell area, utilization | 17,690 µm², 51.6 % | 17,939 µm², 52.4 % |
+| DRC, LVS, antenna, precheck, gate-level tests | pass | pass |
+
+After run
+[45324496603](https://github.com/lucas-rigsby/tt-mantis-fp8-matmul/actions/runs/45324496603)
+the achievable clock at the slow corner is about 60 MHz. The remaining slew
+warnings at tt are on the `cnt[1]` select net, which now feeds the stage-M
+multiplexer and has more than 8 ns of slack.
