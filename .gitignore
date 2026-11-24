@@ -1,0 +1,23 @@
+# Simulation (cocotb / Icarus / Verilator)
+tb/sim_build/
+*.result.xml
+results.xml
+*.vcd
+*.fst
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Synthesis outputs (summaries live in docs/feasibility.md)
+syn/out/
+
+# SymbiYosys work directories
+formal/*/
+
+# OS / editor
+.DS_Store
+*.swp
+.vscode/
+.idea/
