@@ -1,5 +1,9 @@
 <p align="center">
-  <img src="docs/img/mantis-logo.webp" alt="MANTIS logo" width="560">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/img/mantis-logo-dark.webp">
+    <source media="(prefers-color-scheme: light)" srcset="docs/img/mantis-logo-light.webp">
+    <img src="docs/img/mantis-logo-light.webp" alt="MANTIS logo" width="560">
+  </picture>
 </p>
 
 # MANTIS: a 2 × 2 FP8 matrix multiplier for Tiny Tapeout
