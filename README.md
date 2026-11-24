@@ -6,9 +6,9 @@
   </picture>
 </p>
 
-# MANTIS: a 2 × 2 FP8 matrix multiplier for Tiny Tapeout
+# MANTIS: a $2 \times 2$ FP8 matrix multiplier for Tiny Tapeout
 
-MANTIS (`tt_um_mantis`) multiplies a 2 × K matrix by a K × 2 matrix of 8-bit
+MANTIS (`tt_um_mantis`) multiplies a $2 \times K$ matrix by a $K \times 2$ matrix of 8-bit
 floating-point values and accumulates the result in BF16. The design targets
 two Tiny Tapeout tiles on Sky130 at 50 MHz. The host writes one byte per
 clock, and the datapath performs one exact multiply-accumulate per clock.
@@ -103,9 +103,9 @@ cites the requirement IDs it checks.
 | Item | State |
 |---|---|
 | Arithmetic: exact FP8 multiplier, two-stage BF16 adder | complete, exhaustive and differential tests pass |
-| 2 × 2 datapath: one shared multiply-accumulate unit | complete |
+| $2 \times 2$ datapath: one shared multiply-accumulate unit | complete |
 | Controller and Tiny Tapeout top level | complete, pin-level tests and formal proofs pass |
-| Synthesis estimate for the full baseline design | 11,047 µm², about 30 % of a 1 × 2 slot; worst path 13.6 ns at the slow corner against a 20 ns period |
+| Synthesis estimate for the full baseline design | 11,047 µm², about 30 % of a $1 \times 2$ slot; worst path 13.6 ns at the slow corner against a 20 ns period |
 | Hardening: flow STA, DRC/LVS, gate-level simulation (T1 to T3) | not started |
 | JTAG test port | stretch goal |
 
@@ -351,11 +351,11 @@ never updated twice within 4 clocks, so there is no read-after-write hazard.
 | Drain latency | 2 cycles | 5 cycles |
 | Datapath tests | pass | pass |
 
-Both designs passed the gate against the 2 × 2 budget. I chose the shared
-MAC because it uses less than half the area, which makes a 1 × 2 submission
+Both designs passed the gate against the $2 \times 2$ budget. I chose the shared
+MAC because it uses less than half the area, which makes a $1 \times 2$ submission
 practical. The cost is 0.8 ns of critical path and 3 more drain cycles, both
 within the specification. The four-PE design would use about 54 % of a
-1 × 2 slot before adding the controller. It remains in the repository as a
+$1 \times 2$ slot before adding the controller. It remains in the repository as a
 reference.
 
 ### 6. Slow-corner timing
@@ -438,13 +438,13 @@ as expected.
 | Measure | Value |
 |---|---|
 | Cells and flip-flops | 1,247 cells, 191 flip-flops |
-| Area (sized) | 11,047 µm², about 30.5 % of a 1 × 2 slot of about 161 × 225 µm |
+| Area (sized) | 11,047 µm², about 30.5 % of a $1 \times 2$ slot of about $161 \times 225$ µm |
 | Worst path | 6.9 ns at tt and 13.6 ns at ss, against a 20 ns period |
 | Drain latency | 6 cycles, against a limit of 8 |
 | Verification | four cocotb suites with about 1.3 million checked vectors and cycles, plus formal proofs |
 | Inserted bugs detected | 11 of 11 |
 
-Based on these numbers, the tile target changed from 2 × 2 to 1 × 2 in
+Based on these numbers, the tile target changed from $2 \times 2$ to $1 \times 2$ in
 specification revision 0.5. If a later addition does not fit in two tiles,
 the addition is removed rather than the tile count increased.
 
@@ -482,7 +482,7 @@ the computation. Annex S of the specification defines it as follows.
 
 The original requirements allocated 10 to 15 % of four tiles to this logic, roughly
 7,500 to 11,300 µm². Added to the 11,047 µm² baseline, the total would be
-about 50 to 60 % of a 1 × 2 slot.
+about 50 to 60 % of a $1 \times 2$ slot.
 
 The JTAG pins are already reserved, so adding the TAP does not change the
 pinout; requirement R25 is replaced by R16 to R24. If the TAP does not fit
